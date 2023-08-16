@@ -4,7 +4,7 @@ const multer = require('multer');
 const { randomUUID } = require('crypto');
 const mongoose = require('mongoose');
 const asyncHandler = require('express-async-handler');
-const PC = require('../models/PCModel');
+const PC = require('../models/pcModel');
 
 const Storage = multer.diskStorage({
   destination: function (req, file, cb) {
