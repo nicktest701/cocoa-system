@@ -1,29 +1,29 @@
-const router = require("express").Router();
-const _ = require("lodash");
-const mongoose = require("mongoose");
-const asyncHandler = require("express-async-handler");
-const CompanyTransaction = require("../models/companyTransactionModel");
+const router = require('express').Router();
+const _ = require('lodash');
+const mongoose = require('mongoose');
+const asyncHandler = require('express-async-handler');
+const CompanyTransaction = require('../models/companyTransactionModel');
 
 //@GET Get all company transaction
 router.get(
-  "/",
+  '/',
   asyncHandler(async (req, res) => {
     const transactionId = req.query.transactionId;
 
     const companyTransaction = await CompanyTransaction.find({
       transactionId,
     }).sort({ createdAt: 1 });
-    if (!_.isArray(companyTransaction)) {
+    if (_.isEmpty(companyTransaction)) {
       return res
         .status(404)
-        .json("Error fetching company Transactions.Try again later");
+        .json('Error fetching company Transactions.Try again later');
     }
     res.json(companyTransaction);
   })
 );
 //@GET Get  companyTransaction by transactionId
 router.get(
-  "/:transactionId",
+  '/:transactionId',
   asyncHandler(async (req, res) => {
     const transactionId = req.query.transactionId;
     const companyTransaction = await CompanyTransaction.findOne({
@@ -36,7 +36,7 @@ router.get(
 
 //@GET Get all  companyTransaction by transactionId
 router.get(
-  "/all",
+  '/all',
   asyncHandler(async (req, res) => {
     const transactionId = req.query.transactionId;
     const companyTransaction = await CompanyTransaction.findOne({
@@ -49,7 +49,7 @@ router.get(
 
 //@POST Add new CompanyTransaction
 router.post(
-  "/",
+  '/',
   asyncHandler(async (req, res) => {
     const newCompanyTransaction = req.body;
 
@@ -60,7 +60,7 @@ router.post(
     if (_.isEmpty(createdCompanyTransaction)) {
       return res
         .status(404)
-        .json("Error saving CompanyTransaction Info.Try again later!!!");
+        .json('Error saving CompanyTransaction Info.Try again later!!!');
     }
     res.sendStatus(201);
   })
@@ -68,13 +68,13 @@ router.post(
 
 //@PUT update companyTransaction info
 router.put(
-  "/",
+  '/',
   asyncHandler(async (req, res) => {
     const id = req.body.id;
     const modifiedCompanyTransaction = req.body;
 
     if (!mongoose.isValidObjectId(id)) {
-      return res.status(400).json("invalid company Transaction id");
+      return res.status(400).json('invalid company Transaction id');
     }
 
     const updatedCompanyTransaction =
@@ -90,7 +90,7 @@ router.put(
     if (_.isEmpty(updatedCompanyTransaction)) {
       return res
         .status(404)
-        .json("Error saving CompanyTransaction Info.Try again later!!!");
+        .json('Error saving CompanyTransaction Info.Try again later!!!');
     }
     res.sendStatus(201);
   })
@@ -99,16 +99,16 @@ router.put(
 //@DELETE Remove CompanyTransaction by id
 
 router.delete(
-  "/",
+  '/',
   asyncHandler(async (req, res) => {
     const id = req.query.id;
-    if (typeof id === "string") {
+    if (typeof id === 'string') {
       const removedCompanyTransaction =
         await CompanyTransaction.findByIdAndDelete(id);
       return res.sendStatus(200);
     }
 
-    if (typeof id === "object") {
+    if (typeof id === 'object') {
       id.map(async ({ _id }) => {
         await CompanyTransaction.findByIdAndDelete(_id);
       });

@@ -173,7 +173,7 @@ router.put(
           profile: req.file?.filename,
         },
       },
-      { new: true }
+      { new: true, upsert: true }
     );
 
     if (_.isEmpty(updatedUser)) {
@@ -366,43 +366,6 @@ router.delete(
       return res.status(403).json('No User with such id');
     }
     res.status(200).json('User has been removed successfully !!!');
-  })
-);
-
-// GET School Information
-router.get(
-  '/school',
-  asyncHandler(async (req, res) => {
-    const school = await School.findOne();
-
-    res.status(200).json(school);
-  })
-);
-
-// EDIT School Information
-router.put(
-  '/school',
-  asyncHandler(async (req, res) => {
-    const schoolInfo = req.body;
-    const school = await School.findOneAndUpdate(
-      {
-        unique: schoolInfo.unique,
-      },
-
-      schoolInfo,
-
-      {
-        upsert: true,
-        new: true,
-      }
-    );
-
-    if (_.isEmpty(school)) {
-      return res
-        .status(403)
-        .json('Couldn"t save school information.Please try again later.!!');
-    }
-    res.status(200).json('School Information has been saved successfully !!!');
   })
 );
 
