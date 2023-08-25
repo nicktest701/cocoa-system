@@ -1,6 +1,9 @@
 const router = require('express').Router();
 const _ = require('lodash');
-const mongoose = require('mongoose');
+const {
+  isValidObjectId,
+  Types: { ObjectId },
+} = require('mongoose');
 const asyncHandler = require('express-async-handler');
 const Company = require('../models/companyModel');
 
@@ -27,20 +30,13 @@ router.get(
 );
 //@GET Get  company by transactionId
 router.get(
-  '/:id',
+  '/:user',
   asyncHandler(async (req, res) => {
-    const { id, transactionId } = req.query;
-
-    if (id) {
-      const company = await Company.findById(id);
-      return res.status(200).json(company);
-    }
-    if (transactionId) {
-      const company = await Company.findOne({
-        transactionId,
-      });
-      return res.status(200).json(company);
-    }
+    const id = req.params.user;
+    const company = await Company.find({
+      user: ObjectId(id),
+    });
+    res.status(200).json(company);
   })
 );
 
@@ -68,7 +64,7 @@ router.put(
     const id = req.body.id;
     const modifiedCompany = req.body;
 
-    if (!mongoose.isValidObjectId(id)) {
+    if (!isValidObjectId(id)) {
       return res.status(400).json('invalid company id');
     }
 

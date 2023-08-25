@@ -1,6 +1,9 @@
 const router = require('express').Router();
 const _ = require('lodash');
-const mongoose = require('mongoose');
+const {
+  isValidObjectId,
+  Types: { ObjectId },
+} = require('mongoose');
 const asyncHandler = require('express-async-handler');
 const CompanyTransaction = require('../models/companyTransactionModel');
 
@@ -23,12 +26,14 @@ router.get(
 );
 //@GET Get  companyTransaction by transactionId
 router.get(
-  '/:transactionId',
+  '/:id',
   asyncHandler(async (req, res) => {
-    const transactionId = req.query.transactionId;
-    const companyTransaction = await CompanyTransaction.findOne({
-      transactionId,
-    });
+    const id = req.params.id;
+    const companyTransaction = await CompanyTransaction.find({
+      company: ObjectId(id),
+    }).sort({ createdAt: 1 });
+    console.log(companyTransaction)
+
 
     res.json(companyTransaction);
   })
@@ -73,7 +78,7 @@ router.put(
     const id = req.body.id;
     const modifiedCompanyTransaction = req.body;
 
-    if (!mongoose.isValidObjectId(id)) {
+    if (!isValidObjectId(id)) {
       return res.status(400).json('invalid company Transaction id');
     }
 
@@ -99,9 +104,9 @@ router.put(
 //@DELETE Remove CompanyTransaction by id
 
 router.delete(
-  '/',
+  '/:id',
   asyncHandler(async (req, res) => {
-    const id = req.query.id;
+    const id = req.params.id;
     if (typeof id === 'string') {
       const removedCompanyTransaction =
         await CompanyTransaction.findByIdAndDelete(id);

@@ -2,7 +2,10 @@ const router = require('express').Router();
 const _ = require('lodash');
 const multer = require('multer');
 const { randomUUID } = require('crypto');
-const mongoose = require('mongoose');
+const {
+  isValidObjectId,
+  Types: { ObjectId },
+} = require('mongoose');
 const asyncHandler = require('express-async-handler');
 const PC = require('../models/pcModel');
 
@@ -29,16 +32,20 @@ router.get(
     res.json(pcs);
   })
 );
+
 //@GET Get  PC by transactionId
 router.get(
-  '/:transactionId',
+  '/:user',
   asyncHandler(async (req, res) => {
-    const transactionId = req.query.transactionId;
-    const PC = await PC.findOne({
-      transactionId,
+    const id = req.params.user;
+
+    console.log(id);
+
+    const pcs = await PC.find({
+      user: ObjectId(id),
     });
 
-    res.json(PC);
+    res.status(200).json(pcs);
   })
 );
 
@@ -64,7 +71,6 @@ router.post(
 
     newPC.profile = req.file?.filename;
 
-
     const createdPC = await PC.create(newPC);
 
     if (_.isEmpty(createdPC)) {
@@ -81,7 +87,7 @@ router.put(
     const id = req.body.id;
     const modifiedPC = req.body;
 
-    if (!mongoose.isValidObjectId(id)) {
+    if (!isValidObjectId(id)) {
       return res.status(400).json('invalid PC id');
     }
 

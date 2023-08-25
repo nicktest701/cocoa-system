@@ -17,6 +17,10 @@ const DispatcherSchema = new mongoose.Schema(
       type: String,
       lowercase: true,
     },
+    user:{
+      type:mongoose.SchemaTypes.ObjectId,
+      ref:'User'
+    }
   },
   {
     timestamps: true,

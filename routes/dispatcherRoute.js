@@ -1,12 +1,13 @@
-const router = require("express").Router();
+const router = require('express').Router();
 const _ = require('lodash');
 const multer = require('multer');
 const { randomUUID } = require('crypto');
-const mongoose = require("mongoose");
-const asyncHandler = require("express-async-handler");
-const Dispatcher = require("../models/dispatcherModel");
-
-
+const {
+  isValidObjectId,
+  Types: { ObjectId },
+} = require('mongoose');
+const asyncHandler = require('express-async-handler');
+const Dispatcher = require('../models/dispatcherModel');
 
 const Storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -20,34 +21,21 @@ const Storage = multer.diskStorage({
 });
 const upload = multer({ storage: Storage });
 
-
 //@GET Get all dispatchers
 router.get(
-  "/",
+  '/',
   asyncHandler(async (req, res) => {
     const dispatchers = await Dispatcher.find({});
     if (!_.isArray(dispatchers)) {
-      return res.status(404).json("Error fetching dispatchers.Try again later");
+      return res.status(404).json('Error fetching dispatchers.Try again later');
     }
     res.json(dispatchers);
-  })
-);
-//@GET Get  dispatcher by transactionId
-router.get(
-  "/:transactionId",
-  asyncHandler(async (req, res) => {
-    const transactionId = req.query.transactionId;
-    const dispatcher = await Dispatcher.find({
-      transactionId,
-    });
-
-    res.json(dispatcher);
   })
 );
 
 //@GET Get all  dispatcher by transactionId
 router.get(
-  "/all",
+  '/all',
   asyncHandler(async (req, res) => {
     const transactionId = req.query.transactionId;
     const dispatcher = await Dispatcher.findOne({
@@ -58,22 +46,35 @@ router.get(
   })
 );
 
+//@GET Get  dispatcher by transactionId
+router.get(
+  '/:user',
+  asyncHandler(async (req, res) => {
+    const id = req.params.user;
+    const dispatcher = await Dispatcher.find({
+      user: ObjectId(id),
+    });
+
+    res.json(dispatcher);
+  })
+);
+
 //@POST Add new dispatcher
 router.post(
-  "/",
-    upload.single('profile'),
+  '/',
+  upload.single('profile'),
   asyncHandler(async (req, res) => {
     const newDispatcher = req.body;
 
     newDispatcher.profile = req.file?.filename;
-    console.log(newDispatcher)
+    console.log(newDispatcher);
 
     const createdDispatcher = await Dispatcher.create(newDispatcher);
 
     if (_.isEmpty(createdDispatcher)) {
       return res
         .status(404)
-        .json("Error saving dispatcher Info.Try again later!!!");
+        .json('Error saving dispatcher Info.Try again later!!!');
     }
     res.sendStatus(201);
   })
@@ -81,13 +82,13 @@ router.post(
 
 //@PUT update dispatcher info
 router.put(
-  "/",
+  '/',
   asyncHandler(async (req, res) => {
     const id = req.body.id;
     const modifieddispatcher = req.body;
 
-    if (!mongoose.isValidObjectId(id)) {
-      return res.status(400).json("invalid dispatcher id");
+    if (!isValidObjectId(id)) {
+      return res.status(400).json('invalid dispatcher id');
     }
 
     const updateddispatcher = await Dispatcher.findByIdAndUpdate(
@@ -102,7 +103,7 @@ router.put(
     if (_.isEmpty(updateddispatcher)) {
       return res
         .status(404)
-        .json("Error saving dispatcher Info.Try again later!!!");
+        .json('Error saving dispatcher Info.Try again later!!!');
     }
     res.sendStatus(201);
   })
@@ -111,16 +112,16 @@ router.put(
 //@DELETE Remove dispatcher by id
 
 router.delete(
-  "/",
+  '/',
   asyncHandler(async (req, res) => {
     const id = req.query.id;
 
-    if (typeof id === "string") {
+    if (typeof id === 'string') {
       const removeddispatcher = await Dispatcher.findByIdAndDelete(id);
       return res.sendStatus(200);
     }
 
-    if (typeof id === "object") {
+    if (typeof id === 'object') {
       id.map(async ({ _id }) => {
         await Dispatcher.findByIdAndDelete(_id);
       });

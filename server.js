@@ -54,11 +54,11 @@ app.use('/pcTransaction', pcTransactionRoute);
 app.use('/dispatcher', dispatcherRoute);
 app.use('/dispatcherTransaction', dispatcherTransactionRoute);
 
-if (process.env.NODE_ENV === 'production') {
+// if (process.env.NODE_ENV === 'production') {
   app.get('/*', function (req, res) {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
   });
-}
+// }
 
 //error handlers
 app.use((req, res, next) => {

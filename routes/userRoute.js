@@ -4,6 +4,16 @@ const _ = require('lodash');
 const multer = require('multer');
 const { randomUUID } = require('crypto');
 const User = require('../models/userModel');
+const {
+  Types: { ObjectId },
+} = require('mongoose');
+const PC = require('../models/pcModel');
+const Dispatcher = require('../models/dispatcherModel');
+const Company = require('../models/companyModel');
+
+const PCTransaction = require('../models/pcTransactionModel');
+const DispatcherTransaction = require('../models/dispatcherTransactionModel');
+const CompanyTransaction = require('../models/companyTransactionModel');
 
 const Storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -49,6 +59,215 @@ router.get(
       active: user.active,
     };
     res.json(loggedInUser);
+  })
+);
+
+//@GET user by username
+router.get(
+  '/:id/customers',
+  asyncHandler(async (req, res) => {
+    const id = req.params.id;
+
+    const company = await Company.find({
+      user: ObjectId(id),
+    }).count();
+    const dispatcher = await Dispatcher.find({
+      user: ObjectId(id),
+    }).count();
+    const pc = await PC.find({
+      user: ObjectId(id),
+    }).count();
+
+    res.status(200).json({
+      company,
+      pc,
+      dispatcher,
+      total: Number(pc) + Number(company) + Number(dispatcher),
+    });
+  })
+);
+
+//@GET user by username
+router.get(
+  '/:id/advances',
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const company = await CompanyTransaction.find({
+      user: ObjectId(id),
+    }).select('company date advance');
+
+    const pc = await PCTransaction.find({
+      user: ObjectId(id),
+    }).select('pc date advance');
+
+    const dispatcher = await DispatcherTransaction.find({
+      user: ObjectId(id),
+    }).select('dispatcher date closingStock');
+
+    const companySum = _.sumBy(company, 'advance');
+    const pcSum = _.sumBy(pc, 'advance');
+    const dispatcherSum = _.sumBy(dispatcher, 'closingStock');
+
+    res.status(200).json({
+      pc: pcSum,
+      company: companySum,
+      dispatcher: dispatcherSum,
+      total: Number(pcSum + companySum + dispatcherSum),
+    });
+  })
+);
+//@GET user by username
+router.get(
+  '/:id/outstandings',
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const company = await CompanyTransaction.find({
+      user: ObjectId(id),
+    })
+      .select('company date outstanding')
+      .sort({ date: 'desc' });
+
+    const pc = await PCTransaction.find({
+      user: ObjectId(id),
+    })
+      .select('pc date outstanding')
+      .sort({ date: 'desc' });
+
+    const dispatcher = await DispatcherTransaction.find({
+      user: ObjectId(id),
+    }).select('closingStock quantity');
+
+    const com = _.groupBy(company, 'company');
+    const pcd = _.groupBy(pc, 'pc');
+
+    const c = Object?.values(com)?.map((cd) => {
+      return {
+        _id: cd[0]._id,
+        date: cd[0]?.date,
+        customer: cd[0]?.company,
+        outstanding: cd[0].outstanding,
+      };
+    });
+
+    const sumOfCompanyOutstanding = _.sumBy(c, 'outstanding');
+
+    const p = Object?.values(pcd)?.map((cd) => {
+      return {
+        _id: cd[0]._id,
+        date: cd[0]?.date,
+        customer: cd[0]?.pc,
+        outstanding: cd[0].outstanding,
+      };
+    });
+
+    const sumOfPCOutstanding = _.sumBy(p, 'outstanding');
+
+    const sumOfDispatcherOutstanding =
+      _.sumBy(dispatcher, 'closingStock') - _.sumBy(dispatcher, 'quantity');
+
+    res.status(200).json({
+      pc: sumOfPCOutstanding,
+      company: sumOfCompanyOutstanding,
+      dispatcher: sumOfDispatcherOutstanding,
+      total: Number(
+        sumOfCompanyOutstanding +
+          sumOfPCOutstanding +
+          sumOfDispatcherOutstanding
+      ),
+    });
+  })
+);
+
+//@GET user by username
+router.get(
+  '/:id/sales',
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { year } = req.query;
+
+    const company = await CompanyTransaction.find({
+      user: ObjectId(id),
+    })
+      .select('company  date month year advanceCummulative outstanding')
+      .sort({ date: 'desc' });
+
+    const pc = await PCTransaction.find({
+      user: ObjectId(id),
+    })
+      .select('pc date month year advanceCummulative outstanding')
+      .sort({ date: 'desc' });
+
+    const dispatcher = await DispatcherTransaction.find({
+      user: ObjectId(id),
+    }).select('date month year closingStock quantity dispatcher');
+
+    const com = _.groupBy(
+      _.filter(company, (item) => item?.year === parseInt(year)),
+      'company'
+    );
+    const pcd = _.groupBy(
+      _.filter(pc, (item) => item?.year === parseInt(year)),
+      'pc'
+    );
+    const dis = _.groupBy(
+      _.filter(dispatcher, (item) => item?.year === parseInt(year)),
+      'dispatcher'
+    );
+
+    const c = Object?.values(com)?.map((cd) => {
+      return {
+        _id: cd[0]._id,
+        date: cd[0]?.date,
+        month: cd[0]?.month,
+        customer: cd[0]?.company,
+        advance: cd[0].advanceCummulative,
+        outstanding: cd[0].outstanding,
+      };
+    });
+
+    const p = Object?.values(pcd)?.map((cd) => {
+      return {
+        _id: cd[0]._id,
+        date: cd[0]?.date,
+        month: cd[0]?.month,
+        customer: cd[0]?.pc,
+        advance: cd[0].advanceCummulative,
+        outstanding: cd[0].outstanding,
+      };
+    });
+
+    const d = Object?.values(dis)?.map((cd) => {
+      return {
+        _id: cd[0]._id,
+        date: cd[0]?.date,
+        month: cd[0]?.month,
+        customer: cd[0]?.dispatcher,
+        advance: _.sumBy(cd, 'closingStock'),
+        outstanding: _.sumBy(cd, 'quantity'),
+      };
+    });
+
+    const data = await Promise.all([p, c, d]);
+    const flatData = _.flatMap(data);
+
+    const groupedData = _.groupBy(flatData, 'month');
+    const labels = Object.keys(groupedData);
+
+    const values = Object?.values(groupedData)?.map((cd) => {
+      return {
+        advance: _.sumBy(cd, 'advance'),
+        outstanding: _.sumBy(cd, 'outstanding'),
+      };
+    });
+    console.log(labels);
+    console.log(values);
+
+    res.status(200).json({
+      labels,
+      values,
+    });
   })
 );
 
@@ -238,14 +457,13 @@ router.put(
     if (_.isEmpty(user)) {
       return res.status(404).json('User does not exist');
     }
-    const isTrue = await bcrypt.compare(oldPassword, user.password);
+    const isTrue = oldPassword === user.password;
     if (!isTrue) {
       return res.status(404).json('Password is incorrect!!!');
     }
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     const updatedUser = await User.findByIdAndUpdate(id, {
-      password: hashedPassword,
+      password: newPassword,
     });
 
     if (_.isEmpty(updatedUser)) {
@@ -255,6 +473,7 @@ router.put(
     res.json('User information updated !!!');
   })
 );
+
 //@POST Reset User Password
 router.put(
   '/reset-password',
