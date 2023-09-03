@@ -2,7 +2,6 @@ const mongoose = require('mongoose');
 
 let URL = 'mongodb://127.0.0.1:27017/CocoaSystem';
 
-console.log(process.env.NODE_ENV);
 
 if (process.env.NODE_ENV === 'production') {
   URL =

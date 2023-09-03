@@ -88,6 +88,37 @@ router.get(
 );
 
 //@GET user by username
+
+router.get(
+  '/:id/transactions',
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const company = await CompanyTransaction.find({
+      user: ObjectId(id),
+    }).count();
+
+    const pc = await PCTransaction.find({
+      user: ObjectId(id),
+    }).count();
+
+    const dispatcher = await DispatcherTransaction.find({
+      user: ObjectId(id),
+    }).count();
+
+    const total = Number(pc + company + dispatcher);
+
+    res.status(200).json({
+      pc,
+      pcp: Number((pc / total)?.toFixed(2)) * 100,
+      company,
+      companyp: Number(company / total)?.toFixed(2) * 100,
+      dispatcher,
+      dispatcherp: Number(dispatcher / total)?.toFixed(2) * 100,
+      total,
+    });
+  })
+);
 router.get(
   '/:id/advances',
   asyncHandler(async (req, res) => {
