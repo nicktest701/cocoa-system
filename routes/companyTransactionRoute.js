@@ -24,6 +24,7 @@ router.get(
     res.json(companyTransaction);
   })
 );
+
 //@GET Get  companyTransaction by transactionId
 router.get(
   '/:id',
@@ -32,8 +33,6 @@ router.get(
     const companyTransaction = await CompanyTransaction.find({
       company: ObjectId(id),
     }).sort({ createdAt: 1 });
-    console.log(companyTransaction)
-
 
     res.json(companyTransaction);
   })
@@ -41,12 +40,10 @@ router.get(
 
 //@GET Get all  companyTransaction by transactionId
 router.get(
-  '/all',
+  '/transaction/:id',
   asyncHandler(async (req, res) => {
-    const transactionId = req.query.transactionId;
-    const companyTransaction = await CompanyTransaction.findOne({
-      transactionId,
-    });
+    const id = req.params.id;
+    const companyTransaction = await CompanyTransaction.findById(id);
 
     res.json(companyTransaction);
   })

@@ -26,7 +26,7 @@ router.get(
 router.get(
   "/:transactionId",
   asyncHandler(async (req, res) => {
-    console.log("hello2");
+  
     const transactionId = req.query.transactionId;
     const dispatcherTransaction = await DispatcherTransaction.findOne({
       transactionId,

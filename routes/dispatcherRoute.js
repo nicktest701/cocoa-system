@@ -67,7 +67,6 @@ router.post(
     const newDispatcher = req.body;
 
     newDispatcher.profile = req.file?.filename;
-    console.log(newDispatcher);
 
     const createdDispatcher = await Dispatcher.create(newDispatcher);
 

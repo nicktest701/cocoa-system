@@ -32,7 +32,7 @@ router.get(
   '/',
   asyncHandler(async (req, res) => {
     const users = await User.find({}).select('-password');
-    // console.log(users);
+
 
     // if (_.isEmpty(users)) {
     //   return res.status(404).json("Error fetching user information");
@@ -109,12 +109,18 @@ router.get(
     const total = Number(pc + company + dispatcher);
 
     res.status(200).json({
-      pc,
-      pcp: Number((pc / total)?.toFixed(2)) * 100,
-      company,
-      companyp: Number(company / total)?.toFixed(2) * 100,
-      dispatcher,
-      dispatcherp: Number(dispatcher / total)?.toFixed(2) * 100,
+      pc: _.isNaN(pc) ? 0 : pc,
+      pcp: _.isNaN((Number(pc / total) * 100)?.toFixed(2))
+        ? 0
+        : (Number(pc / total) * 100)?.toFixed(2),
+      company: _.isNaN(company) ? 0 : company,
+      companyp: _.isNaN((Number(company / total) * 100)?.toFixed(2))
+        ? 0
+        : (Number(company / total) * 100)?.toFixed(2),
+      dispatcher: _.isNaN(dispatcher) ? 0 : dispatcher,
+      dispatcherp: _.isNaN((Number(dispatcher / total) * 100)?.toFixed(2))
+        ? 0
+        : (Number(dispatcher / total) * 100)?.toFixed(2),
       total,
     });
   })
@@ -281,7 +287,25 @@ router.get(
     });
 
     const data = await Promise.all([p, c, d]);
-    const flatData = _.flatMap(data);
+
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+
+    const flatData = _.flatMap(data).sort((a, b) => {
+      return months.indexOf(a.month) - months.indexOf(b.month);
+    });
 
     const groupedData = _.groupBy(flatData, 'month');
     const labels = Object.keys(groupedData);
@@ -292,8 +316,6 @@ router.get(
         outstanding: _.sumBy(cd, 'outstanding'),
       };
     });
-    console.log(labels);
-    console.log(values);
 
     res.status(200).json({
       labels,
@@ -415,7 +437,6 @@ router.put(
   asyncHandler(async (req, res) => {
     const { id } = req.body;
 
-    console.log(req.body);
     const updatedUser = await User.findByIdAndUpdate(
       id,
       {
@@ -602,7 +623,6 @@ router.delete(
   '/:id',
   asyncHandler(async (req, res) => {
     const id = req.params.id;
-    //console.log(id);
 
     if (!mongoose.isValidObjectId(id)) {
       return res.status(401).json('Invalid User information');

@@ -39,8 +39,6 @@ router.get(
   asyncHandler(async (req, res) => {
     const id = req.params.user;
 
-    console.log(id);
-
     const pcs = await PC.find({
       user: ObjectId(id),
     });

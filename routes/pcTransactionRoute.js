@@ -36,7 +36,6 @@ router.get(
     }).sort({
       createdAt: 1,
     });
-    console.log(pcTransaction);
 
     res.json(pcTransaction);
   })
