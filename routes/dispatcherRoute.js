@@ -108,6 +108,30 @@ router.put(
   })
 );
 
+//@DELETE Remove Multiple Dispatcher
+
+router.put(
+  '/delete',
+  asyncHandler(async (req, res) => {
+    const ids = req.body;
+
+    const removedDispatcher = await Dispatcher.remove({
+      _id: {
+        $in: ids,
+      },
+    });
+
+    if (_.isEmpty(removedDispatcher)) {
+      return res
+        .status(404)
+        .json('Error removing Dispatcher. Try again later!!!');
+    }
+
+    return res.sendStatus(200);
+  })
+);
+
+
 //@DELETE Remove dispatcher by id
 
 router.delete(

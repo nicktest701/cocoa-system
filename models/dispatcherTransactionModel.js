@@ -6,6 +6,7 @@ const DispatcherTransactionSchema = new mongoose.Schema(
     date: Date,
     advance: Number,
     closingStock: Number,
+    sdw: String,
     quantity: Number,
     cummulative: Number,
     outstanding: Number,

@@ -101,6 +101,27 @@ router.put(
   })
 );
 
+//@DELETE Remove Multiple PC
+
+router.put(
+  '/delete',
+  asyncHandler(async (req, res) => {
+    const ids = req.body;
+
+    const removePC = await PC.remove({
+      _id: {
+        $in: ids,
+      },
+    });
+
+    if (_.isEmpty(removePC)) {
+      return res.status(404).json('Error removing Clerks .Try again later!!!');
+    }
+
+    return res.sendStatus(200);
+  })
+);
+
 //@DELETE Remove PC by id
 
 router.delete(

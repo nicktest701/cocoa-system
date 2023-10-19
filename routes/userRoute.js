@@ -33,7 +33,6 @@ router.get(
   asyncHandler(async (req, res) => {
     const users = await User.find({}).select('-password');
 
-
     // if (_.isEmpty(users)) {
     //   return res.status(404).json("Error fetching user information");
     // }
@@ -160,60 +159,132 @@ router.get(
   asyncHandler(async (req, res) => {
     const { id } = req.params;
 
-    const company = await CompanyTransaction.find({
-      user: ObjectId(id),
-    })
-      .select('company date outstanding')
-      .sort({ date: 'desc' });
-
-    const pc = await PCTransaction.find({
-      user: ObjectId(id),
-    })
-      .select('pc date outstanding')
-      .sort({ date: 'desc' });
-
-    const dispatcher = await DispatcherTransaction.find({
-      user: ObjectId(id),
-    }).select('closingStock quantity');
-
-    const com = _.groupBy(company, 'company');
-    const pcd = _.groupBy(pc, 'pc');
-
-    const c = Object?.values(com)?.map((cd) => {
-      return {
-        _id: cd[0]._id,
-        date: cd[0]?.date,
-        customer: cd[0]?.company,
-        outstanding: cd[0].outstanding,
-      };
+    //company
+    const companies = await Company.find({
+      user: new ObjectId(id),
     });
 
-    const sumOfCompanyOutstanding = _.sumBy(c, 'outstanding');
+    const companyTransaction = companies.map(async (company) => {
+      const transaction = await CompanyTransaction.find({
+        user: new ObjectId(id),
+        company: new ObjectId(company?._id),
+      });
 
-    const p = Object?.values(pcd)?.map((cd) => {
-      return {
-        _id: cd[0]._id,
-        date: cd[0]?.date,
-        customer: cd[0]?.pc,
-        outstanding: cd[0].outstanding,
-      };
+      if (!_.isEmpty(transaction)) {
+        const lastTransaction = _.last(
+          _.orderBy(transaction, 'createdAt', 'asc')
+        );
+
+        return {
+          advance: lastTransaction?.advance,
+          advanceCummulative: lastTransaction?.advanceCummulative,
+          grns: lastTransaction?.grns,
+          grnsCummulative: lastTransaction?.grnsCummulative,
+          outstanding: lastTransaction?.outstanding,
+        };
+      }
     });
 
-    const sumOfPCOutstanding = _.sumBy(p, 'outstanding');
+    const companySummary = await Promise.all(companyTransaction);
+    const filteredCompanies = companySummary.filter(
+      (item) => item !== undefined
+    );
+    //  console.log(companySummary)
 
-    const sumOfDispatcherOutstanding =
-      _.sumBy(dispatcher, 'closingStock') - _.sumBy(dispatcher, 'quantity');
-
-    res.status(200).json({
-      pc: sumOfPCOutstanding,
-      company: sumOfCompanyOutstanding,
-      dispatcher: sumOfDispatcherOutstanding,
-      total: Number(
-        sumOfCompanyOutstanding +
-          sumOfPCOutstanding +
-          sumOfDispatcherOutstanding
-      ),
+    //clerks
+    const clerks = await PC.find({
+      user: new ObjectId(id),
     });
+
+    const clerksTransaction = clerks.map(async (clerk) => {
+      const transaction = await PCTransaction.find({
+        user: new ObjectId(id),
+        pc: new ObjectId(clerk?._id),
+      });
+
+      if (!_.isEmpty(transaction)) {
+        const lastTransaction = _.last(
+          _.orderBy(transaction, 'createdAt', 'asc')
+        );
+
+        return {
+          advance: lastTransaction?.advance,
+          advanceCummulative: lastTransaction?.advanceCummulative,
+          delivered: lastTransaction?.delivered,
+          deliveredCummulative: lastTransaction?.deliveredCummulative,
+          outstanding: lastTransaction?.outstanding,
+        };
+      }
+    });
+
+    const clerkSummary = await Promise.all(clerksTransaction);
+    const filteredClerks = clerkSummary.filter((item) => item !== undefined);
+
+    // console.log(filteredCompanies, filteredClerks);
+    const companyOutStanding = _.sumBy(filteredCompanies, 'outstanding');
+    const pcOutStanding = _.sumBy(filteredClerks, 'outstanding');
+
+    return res.status(200).json({
+      pc: pcOutStanding,
+      company: companyOutStanding,
+      dispatcher: 0,
+      total: Number(companyOutStanding + pcOutStanding),
+    });
+
+    // const company = await CompanyTransaction.find({
+    //   user: ObjectId(id),
+    // })
+    //   .select('company date outstanding')
+    //   .sort({ date: 'desc' });
+
+    // const pc = await PCTransaction.find({
+    //   user: ObjectId(id),
+    // })
+    //   .select('pc date outstanding')
+    //   .sort({ date: 'desc' });
+
+    // const dispatcher = await DispatcherTransaction.find({
+    //   user: ObjectId(id),
+    // }).select('closingStock quantity');
+
+    // const com = _.groupBy(company, 'company');
+    // const pcd = _.groupBy(pc, 'pc');
+
+    // const c = Object?.values(com)?.map((cd) => {
+    //   return {
+    //     _id: cd[0]._id,
+    //     date: cd[0]?.date,
+    //     customer: cd[0]?.company,
+    //     outstanding: cd[0].outstanding,
+    //   };
+    // });
+
+    // const sumOfCompanyOutstanding = _.sumBy(c, 'outstanding');
+
+    // const p = Object?.values(pcd)?.map((cd) => {
+    //   return {
+    //     _id: cd[0]._id,
+    //     date: cd[0]?.date,
+    //     customer: cd[0]?.pc,
+    //     outstanding: cd[0].outstanding,
+    //   };
+    // });
+
+    // const sumOfPCOutstanding = _.sumBy(p, 'outstanding');
+
+    // const sumOfDispatcherOutstanding =
+    //   _.sumBy(dispatcher, 'closingStock') - _.sumBy(dispatcher, 'quantity');
+
+    // res.status(200).json({
+    //   pc: sumOfPCOutstanding,
+    //   company: sumOfCompanyOutstanding,
+    //   dispatcher: sumOfDispatcherOutstanding,
+    //   total: Number(
+    //     sumOfCompanyOutstanding +
+    //       sumOfPCOutstanding +
+    //       sumOfDispatcherOutstanding
+    //   ),
+    // });
   })
 );
 
@@ -225,20 +296,22 @@ router.get(
     const { year } = req.query;
 
     const company = await CompanyTransaction.find({
-      user: ObjectId(id),
+      user:new ObjectId(id),
     })
       .select('company  date month year advanceCummulative outstanding')
-      .sort({ date: 'desc' });
+      .sort({ createdAt: 'desc' });
 
     const pc = await PCTransaction.find({
-      user: ObjectId(id),
+      user:new ObjectId(id),
     })
       .select('pc date month year advanceCummulative outstanding')
-      .sort({ date: 'desc' });
+      .sort({ createdAt: 'desc' });
 
     const dispatcher = await DispatcherTransaction.find({
-      user: ObjectId(id),
-    }).select('date month year closingStock quantity dispatcher');
+      user:new ObjectId(id),
+    })
+      .select('date month year closingStock quantity dispatcher')
+      .sort({ createdAt: 'desc' });
 
     const com = _.groupBy(
       _.filter(company, (item) => item?.year === parseInt(year)),

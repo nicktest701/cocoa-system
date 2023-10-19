@@ -86,6 +86,29 @@ router.put(
   })
 );
 
+//@DELETE Remove Multiple Company
+
+router.put(
+  '/delete',
+  asyncHandler(async (req, res) => {
+    const ids = req.body;
+
+    const removedCompany = await Company.remove({
+      _id: {
+        $in: ids,
+      },
+    });
+
+    if (_.isEmpty(removedCompany)) {
+      return res
+        .status(404)
+        .json('Error removing Company Info.Try again later!!!');
+    }
+
+    return res.sendStatus(200);
+  })
+);
+
 //@DELETE Remove Company by id
 
 router.delete(
