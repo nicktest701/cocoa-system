@@ -12,7 +12,7 @@ router.get(
 
     const dispatcherTransaction = await DispatcherTransaction.find({
       transactionId,
-    }).sort({ createdAt: 1 });
+    }).sort({ date: 1 });
     if (!_.isArray(dispatcherTransaction)) {
       return res
         .status(404)

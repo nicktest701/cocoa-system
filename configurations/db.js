@@ -16,9 +16,10 @@ mongoose.connection.on('connected', () => {
   console.log('connected');
 });
 
-process.on('SIGINT', () => {
-  mongoose.connection.close();
+process.on('SIGINT', async() => {
+await  mongoose.connection.close();
   console.log('disconnected');
+process.exit (0);
 });
 
 module.exports = db;

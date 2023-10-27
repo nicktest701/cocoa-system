@@ -15,7 +15,7 @@ router.get(
 
     const pcTransaction = await PCTransaction.find({
       transactionId,
-    }).sort({ createdAt: 1 });
+    }).sort({ date: 1 });
     if (!_.isArray(pcTransaction)) {
       return res
         .status(404)
@@ -89,7 +89,7 @@ router.get(
     const pcTransaction = await PCTransaction.find({
       pc: ObjectId(id),
     }).sort({
-      createdAt: 1,
+      date: 1,
     });
 
     res.json(pcTransaction);

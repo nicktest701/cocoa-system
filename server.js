@@ -4,7 +4,7 @@ const path = require('path');
 const createError = require('http-errors');
 const logger = require('morgan');
 const cors = require('cors');
-const session = require('express-session');
+//const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const db = require('./configurations/db');
 
@@ -20,22 +20,22 @@ const dispatcherTransactionRoute = require('./routes/dispatcherTransactionRoute'
 const app = express();
 
 //default port
-const port = process.env.PORT || 8000;
+const port = process.env.PORT || 8005;
 
 //middlewares
 app.use(cors());
 app.use(cookieParser());
 app.use(logger('dev'));
 
-if (process.env.NODE_ENV !== 'production') {
-  app.use(
-    session({
-      saveUninitialized: false,
-      resave: true,
-      secret: process.env.SESSION_SECRET,
-    })
-  );
-}
+//if (process.env.NODE_ENV === 'production') {
+ // app.use(
+  //  session({
+ //     saveUninitialized: false,
+ //     resave: true,
+    //  secret: process.env.SESSION_SECRET,
+ //   })
+ // );
+//}
 
 //form data
 app.use(express.urlencoded({ extended: true }));

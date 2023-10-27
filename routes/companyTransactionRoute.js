@@ -15,12 +15,14 @@ router.get(
 
     const companyTransaction = await CompanyTransaction.find({
       transactionId,
-    }).sort({ createdAt: 1 });
+    }).sort({ date: 1 });
     if (_.isEmpty(companyTransaction)) {
       return res
         .status(404)
         .json('Error fetching company Transactions.Try again later');
     }
+    console.log(companyTransaction);
+
     res.json(companyTransaction);
   })
 );
@@ -32,7 +34,7 @@ router.get(
     const id = req.params.id;
     const companyTransaction = await CompanyTransaction.find({
       company: ObjectId(id),
-    }).sort({ createdAt: 1 });
+    }).sort({ date: 1 });
 
     res.json(companyTransaction);
   })
