@@ -2,11 +2,11 @@
   "name": "cocoa-server",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index.js",
-    "server": "nodemon index.js",
+    "start": "node server.js",
+    "server": "nodemon server.js",
     "client": "npm run dev --prefix ./app",
     "dev": "concurrently \"npm run server\" \"npm run client\""
   },
