@@ -1,0 +1,1 @@
+%windir%\system32\CMD.exe /k "start pm2 start C:\Users\Akwasi\Documents\React\Cocoa\server\index.js --name cocoa "

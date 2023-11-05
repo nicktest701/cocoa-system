@@ -17,6 +17,7 @@ const CompanyTransactionSchema = new mongoose.Schema(
       type: mongoose.SchemaTypes.ObjectId,
       ref: 'Company',
     },
+    session: Number,
   },
   {
     timestamps: true,

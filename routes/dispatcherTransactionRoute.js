@@ -1,48 +1,34 @@
 const router = require('express').Router();
 const _ = require('lodash');
-const mongoose = require('mongoose');
+const {
+  isValidObjectId,
+  Types: { ObjectId },
+} = require('mongoose');
 const asyncHandler = require('express-async-handler');
 const DispatcherTransaction = require('../models/dispatcherTransactionModel');
+const Stock = require('../models/stockModel');
 
 //@GET Get all dispatcher transaction
 router.get(
   '/',
   asyncHandler(async (req, res) => {
-    const transactionId = req.query.transactionId;
+    const { session, dispatcher } = req.query;
 
     const dispatcherTransaction = await DispatcherTransaction.find({
-      transactionId,
+      dispatcher: ObjectId(dispatcher),
+      session,
     }).sort({ date: 1 });
-    if (!_.isArray(dispatcherTransaction)) {
-      return res
-        .status(404)
-        .json('Error fetching dispatcher Transactions.Try again later');
-    }
-    res.json(dispatcherTransaction);
-  })
-);
-
-//@GET Get  dispatcherTransaction by transactionId
-router.get(
-  '/:transactionId',
-  asyncHandler(async (req, res) => {
-    const transactionId = req.query.transactionId;
-    const dispatcherTransaction = await DispatcherTransaction.findOne({
-      transactionId,
-    });
 
     res.json(dispatcherTransaction);
   })
 );
 
-//@GET Get all  dispatcherTransaction by transactionId
+//@GET Get  dispatcherTransaction by id
 router.get(
-  '/all',
+  '/:id',
   asyncHandler(async (req, res) => {
-    const transactionId = req.query.transactionId;
-    const dispatcherTransaction = await DispatcherTransaction.findOne({
-      transactionId,
-    });
+    const id = req.params.id;
+    const dispatcherTransaction = await DispatcherTransaction.findById(id);
 
     res.json(dispatcherTransaction);
   })
@@ -53,12 +39,34 @@ router.post(
   '/',
   asyncHandler(async (req, res) => {
     const newdispatcherTransaction = req.body;
+    const { session } = req.query;
 
     const createddispatcherTransaction = await DispatcherTransaction.create(
       newdispatcherTransaction
     );
 
     if (_.isEmpty(createddispatcherTransaction)) {
+      return res
+        .status(404)
+        .json('Error saving dispatcherTransaction Info.Try again later!!!');
+    }
+
+    const decrementValue = -Math.abs(newdispatcherTransaction?.quantity);
+    // console.log(decrementValue);
+    const updatedStock = await Stock.findOneAndUpdate(
+      {
+        user: new ObjectId(newdispatcherTransaction?.user),
+        session: newdispatcherTransaction?.session,
+      },
+      {
+        $inc: {
+          total: decrementValue,
+        },
+      },
+      { new: true, upsert: true }
+    );
+
+    if (_.isEmpty(updatedStock)) {
       return res
         .status(404)
         .json('Error saving dispatcherTransaction Info.Try again later!!!');
@@ -75,7 +83,7 @@ router.put(
     const id = req.body.id;
     const modifieddispatcherTransaction = req.body;
 
-    if (!mongoose.isValidObjectId(id)) {
+    if (!isValidObjectId(id)) {
       return res.status(400).json('invalid dispatcher Transaction id');
     }
 
@@ -105,11 +113,13 @@ router.put(
   asyncHandler(async (req, res) => {
     const ids = req.body;
 
-    const removedDispatcherTransaction = await DispatcherTransaction.remove({
-      _id: {
-        $in: ids,
-      },
-    });
+    const removedDispatcherTransaction = await DispatcherTransaction.deleteMany(
+      {
+        _id: {
+          $in: ids,
+        },
+      }
+    );
 
     if (_.isEmpty(removedDispatcherTransaction)) {
       return res

@@ -8,6 +8,7 @@ const {
 } = require('mongoose');
 const asyncHandler = require('express-async-handler');
 const PC = require('../models/pcModel');
+const PCTransaction = require('../models/pcTransactionModel');
 
 const Storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -21,23 +22,11 @@ const Storage = multer.diskStorage({
 });
 const upload = multer({ storage: Storage });
 
-//@GET Get all pcs
+//@GET Get  PC by transactionId
 router.get(
   '/',
   asyncHandler(async (req, res) => {
-    const pcs = await PC.find({});
-    if (!_.isArray(pcs)) {
-      return res.status(404).json('Error fetching pcs.Try again later');
-    }
-    res.json(pcs);
-  })
-);
-
-//@GET Get  PC by transactionId
-router.get(
-  '/:user',
-  asyncHandler(async (req, res) => {
-    const id = req.params.user;
+    const id = req.query.user;
 
     const pcs = await PC.find({
       user: ObjectId(id),
@@ -57,6 +46,16 @@ router.get(
     });
 
     res.json(PC);
+  })
+);
+
+//@GET Get PC
+router.get(
+  '/:id',
+  asyncHandler(async (req, res) => {
+    const id = req.params.id;
+    const pc = await PC.findById(id);
+    res.json(pc);
   })
 );
 
@@ -117,6 +116,11 @@ router.put(
     if (_.isEmpty(removePC)) {
       return res.status(404).json('Error removing Clerks .Try again later!!!');
     }
+    const removePCTransaction = await PCTransaction.remove({
+      pc: {
+        $in: ids,
+      },
+    });
 
     return res.sendStatus(200);
   })
@@ -129,18 +133,17 @@ router.delete(
   asyncHandler(async (req, res) => {
     const id = req.query.id;
 
-    if (typeof id === 'string') {
-      const removedPC = await PC.findByIdAndDelete(id);
-      return res.sendStatus(200);
+    const removedPC = await PC.findByIdAndDelete(id);
+
+    if (_.isEmpty(removedPC)) {
+      return res.status(404).json('Error removing Clerks .Try again later!!!');
     }
 
-    if (typeof id === 'object') {
-      id.map(async ({ _id }) => {
-        await PC.findByIdAndDelete(_id);
-      });
+    const removedPCTransaction = await PCTransaction.findOneAndRemove({
+      pc: new ObjectId(id),
+    });
 
-      return res.sendStatus(200);
-    }
+    return res.sendStatus(200);
   })
 );
 

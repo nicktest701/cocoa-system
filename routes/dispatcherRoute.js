@@ -8,6 +8,7 @@ const {
 } = require('mongoose');
 const asyncHandler = require('express-async-handler');
 const Dispatcher = require('../models/dispatcherModel');
+const DispatcherTransaction = require('../models/dispatcherTransactionModel');
 
 const Storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -25,35 +26,21 @@ const upload = multer({ storage: Storage });
 router.get(
   '/',
   asyncHandler(async (req, res) => {
-    const dispatchers = await Dispatcher.find({});
-    if (!_.isArray(dispatchers)) {
-      return res.status(404).json('Error fetching dispatchers.Try again later');
-    }
-    res.json(dispatchers);
-  })
-);
-
-//@GET Get all  dispatcher by transactionId
-router.get(
-  '/all',
-  asyncHandler(async (req, res) => {
-    const transactionId = req.query.transactionId;
-    const dispatcher = await Dispatcher.findOne({
-      transactionId,
+    const { user } = req.query;
+    const dispatchers = await Dispatcher.find({
+      user: ObjectId(user),
     });
 
-    res.json(dispatcher);
+    res.json(dispatchers);
   })
 );
 
 //@GET Get  dispatcher by transactionId
 router.get(
-  '/:user',
+  '/:id',
   asyncHandler(async (req, res) => {
-    const id = req.params.user;
-    const dispatcher = await Dispatcher.find({
-      user: ObjectId(id),
-    });
+    const id = req.params.id;
+    const dispatcher = await Dispatcher.findById(id);
 
     res.json(dispatcher);
   })
@@ -127,10 +114,15 @@ router.put(
         .json('Error removing Dispatcher. Try again later!!!');
     }
 
+    await DispatcherTransaction.remove({
+      dispatcher: {
+        $in: ids,
+      },
+    });
+
     return res.sendStatus(200);
   })
 );
-
 
 //@DELETE Remove dispatcher by id
 
@@ -139,18 +131,19 @@ router.delete(
   asyncHandler(async (req, res) => {
     const id = req.query.id;
 
-    if (typeof id === 'string') {
-      const removeddispatcher = await Dispatcher.findByIdAndDelete(id);
-      return res.sendStatus(200);
+    const removedDispatcher = await Dispatcher.findByIdAndDelete(id);
+
+    if (_.isEmpty(removedDispatcher)) {
+      return res
+        .status(404)
+        .json('Error removing Dispatcher. Try again later!!!');
     }
 
-    if (typeof id === 'object') {
-      id.map(async ({ _id }) => {
-        await Dispatcher.findByIdAndDelete(_id);
-      });
+    await DispatcherTransaction.findOneAndDelete({
+      dispatcher: new ObjectId(id),
+    });
 
-      return res.sendStatus(200);
-    }
+    return res.sendStatus(200);
   })
 );
 

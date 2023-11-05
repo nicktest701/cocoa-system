@@ -1,5 +1,5 @@
-const db=require('../configurations/db')
-const mongoose = require("mongoose");
+const db = require('../configurations/db');
+const mongoose = require('mongoose');
 
 const CompanySchema = new mongoose.Schema(
   {
@@ -10,14 +10,14 @@ const CompanySchema = new mongoose.Schema(
       type: String,
       lowercase: true,
     },
-    user:{
-      type:mongoose.SchemaTypes.ObjectId,
-      ref:'User'
-    }
+    user: {
+      type: mongoose.SchemaTypes.ObjectId,
+      ref: 'User',
+    },
   },
   {
     timestamps: true,
   }
 );
 
-module.exports = mongoose.model("Company", CompanySchema);
+module.exports = mongoose.model('Company', CompanySchema);

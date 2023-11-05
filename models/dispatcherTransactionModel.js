@@ -18,6 +18,7 @@ const DispatcherTransactionSchema = new mongoose.Schema(
       type: mongoose.SchemaTypes.ObjectId,
       ref: 'Dispatcher',
     },
+    session: Number,
   },
   {
     timestamps: true,

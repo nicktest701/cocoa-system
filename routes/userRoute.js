@@ -2,6 +2,7 @@ const router = require('express').Router();
 const asyncHandler = require('express-async-handler');
 const _ = require('lodash');
 const multer = require('multer');
+const bcrypt = require('bcrypt');
 const { randomUUID } = require('crypto');
 const User = require('../models/userModel');
 const {
@@ -92,34 +93,36 @@ router.get(
   '/:id/transactions',
   asyncHandler(async (req, res) => {
     const { id } = req.params;
+    const { session } = req.query;
 
     const company = await CompanyTransaction.find({
       user: ObjectId(id),
+      session,
     }).count();
 
     const pc = await PCTransaction.find({
       user: ObjectId(id),
+      session,
     }).count();
 
     const dispatcher = await DispatcherTransaction.find({
       user: ObjectId(id),
+      session,
     }).count();
 
-    const total = Number(pc + company + dispatcher);
+    const pcs = _.isNaN(pc) ? 0 : +pc;
+    const companies = _.isNaN(company) ? 0 : +company;
+    const dispatchers = _.isNaN(dispatcher) ? 0 : +dispatcher;
+
+    const total = pcs + companies + dispatchers;
 
     res.status(200).json({
-      pc: _.isNaN(pc) ? 0 : pc,
-      pcp: _.isNaN((Number(pc / total) * 100)?.toFixed(2))
-        ? 0
-        : (Number(pc / total) * 100)?.toFixed(2),
-      company: _.isNaN(company) ? 0 : company,
-      companyp: _.isNaN((Number(company / total) * 100)?.toFixed(2))
-        ? 0
-        : (Number(company / total) * 100)?.toFixed(2),
-      dispatcher: _.isNaN(dispatcher) ? 0 : dispatcher,
-      dispatcherp: _.isNaN((Number(dispatcher / total) * 100)?.toFixed(2))
-        ? 0
-        : (Number(dispatcher / total) * 100)?.toFixed(2),
+      pc: pcs,
+      pcp: ((pc / total) * 100)?.toFixed(2),
+      company: companies,
+      companyp: ((company / total) * 100)?.toFixed(2),
+      dispatcher: dispatchers,
+      dispatcherp: ((dispatcher / total) * 100)?.toFixed(2),
       total,
     });
   })
@@ -128,28 +131,63 @@ router.get(
   '/:id/advances',
   asyncHandler(async (req, res) => {
     const { id } = req.params;
+    const { session } = req.query;
 
     const company = await CompanyTransaction.find({
       user: ObjectId(id),
+      session,
     }).select('company date advance');
 
     const pc = await PCTransaction.find({
       user: ObjectId(id),
+      session,
     }).select('pc date advance');
 
-    const dispatcher = await DispatcherTransaction.find({
-      user: ObjectId(id),
-    }).select('dispatcher date closingStock');
+    // const dispatcher = await DispatcherTransaction.find({
+    //   user: ObjectId(id),
+    // }).select('dispatcher date closingStock');
 
     const companySum = _.sumBy(company, 'advance');
     const pcSum = _.sumBy(pc, 'advance');
-    const dispatcherSum = _.sumBy(dispatcher, 'closingStock');
+    // const dispatcherSum = _.sumBy(dispatcher, 'closingStock');
 
     res.status(200).json({
       pc: pcSum,
       company: companySum,
-      dispatcher: dispatcherSum,
-      total: Number(pcSum + companySum + dispatcherSum),
+      // dispatcher: dispatcherSum,
+      total: Number(pcSum + companySum),
+    });
+  })
+);
+router.get(
+  '/:id/delivered',
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { session } = req.query;
+
+    const company = await CompanyTransaction.find({
+      user: ObjectId(id),
+      session,
+    }).select('grns');
+
+    const pc = await PCTransaction.find({
+      user: ObjectId(id),
+      session,
+    }).select('delivered');
+
+    // const dispatcher = await DispatcherTransaction.find({
+    //   user: ObjectId(id),
+    // }).select('dispatcher date quantity');
+
+    const companySum = _.sumBy(company, 'grns');
+    const pcSum = _.sumBy(pc, 'delivered');
+    // const dispatcherSum = _.sumBy(dispatcher, 'quantity');
+
+    res.status(200).json({
+      pc: pcSum,
+      company: companySum,
+      // dispatcher: dispatcherSum,
+      total: Number(pcSum + companySum),
     });
   })
 );
@@ -158,133 +196,28 @@ router.get(
   '/:id/outstandings',
   asyncHandler(async (req, res) => {
     const { id } = req.params;
+    const { session } = req.query;
 
-    //company
-    const companies = await Company.find({
-      user: new ObjectId(id),
-    });
+    const company = await CompanyTransaction.find({
+      user: ObjectId(id),
+      session,
+    }).select('advance grns');
 
-    const companyTransaction = companies.map(async (company) => {
-      const transaction = await CompanyTransaction.find({
-        user: new ObjectId(id),
-        company: new ObjectId(company?._id),
-      });
+    const pc = await PCTransaction.find({
+      user: ObjectId(id),
+      session,
+    }).select('advance delivered');
 
-      if (!_.isEmpty(transaction)) {
-        const lastTransaction = _.last(
-          _.orderBy(transaction, 'createdAt', 'asc')
-        );
-
-        return {
-          advance: lastTransaction?.advance,
-          advanceCummulative: lastTransaction?.advanceCummulative,
-          grns: lastTransaction?.grns,
-          grnsCummulative: lastTransaction?.grnsCummulative,
-          outstanding: lastTransaction?.outstanding,
-        };
-      }
-    });
-
-    const companySummary = await Promise.all(companyTransaction);
-    const filteredCompanies = companySummary.filter(
-      (item) => item !== undefined
-    );
-    //  console.log(companySummary)
-
-    //clerks
-    const clerks = await PC.find({
-      user: new ObjectId(id),
-    });
-
-    const clerksTransaction = clerks.map(async (clerk) => {
-      const transaction = await PCTransaction.find({
-        user: new ObjectId(id),
-        pc: new ObjectId(clerk?._id),
-      });
-
-      if (!_.isEmpty(transaction)) {
-        const lastTransaction = _.last(
-          _.orderBy(transaction, 'createdAt', 'asc')
-        );
-
-        return {
-          advance: lastTransaction?.advance,
-          advanceCummulative: lastTransaction?.advanceCummulative,
-          delivered: lastTransaction?.delivered,
-          deliveredCummulative: lastTransaction?.deliveredCummulative,
-          outstanding: lastTransaction?.outstanding,
-        };
-      }
-    });
-
-    const clerkSummary = await Promise.all(clerksTransaction);
-    const filteredClerks = clerkSummary.filter((item) => item !== undefined);
-
-    // console.log(filteredCompanies, filteredClerks);
-    const companyOutStanding = _.sumBy(filteredCompanies, 'outstanding');
-    const pcOutStanding = _.sumBy(filteredClerks, 'outstanding');
+    const companyOutStanding =
+      _.sumBy(company, 'advance') - _.sumBy(company, 'grns');
+    const pcOutStanding = _.sumBy(pc, 'advance') - _.sumBy(pc, 'delivered');
 
     return res.status(200).json({
       pc: pcOutStanding,
       company: companyOutStanding,
-      dispatcher: 0,
+      // dispatcher: 0,
       total: Number(companyOutStanding + pcOutStanding),
     });
-
-    // const company = await CompanyTransaction.find({
-    //   user: ObjectId(id),
-    // })
-    //   .select('company date outstanding')
-    //   .sort({ date: 'desc' });
-
-    // const pc = await PCTransaction.find({
-    //   user: ObjectId(id),
-    // })
-    //   .select('pc date outstanding')
-    //   .sort({ date: 'desc' });
-
-    // const dispatcher = await DispatcherTransaction.find({
-    //   user: ObjectId(id),
-    // }).select('closingStock quantity');
-
-    // const com = _.groupBy(company, 'company');
-    // const pcd = _.groupBy(pc, 'pc');
-
-    // const c = Object?.values(com)?.map((cd) => {
-    //   return {
-    //     _id: cd[0]._id,
-    //     date: cd[0]?.date,
-    //     customer: cd[0]?.company,
-    //     outstanding: cd[0].outstanding,
-    //   };
-    // });
-
-    // const sumOfCompanyOutstanding = _.sumBy(c, 'outstanding');
-
-    // const p = Object?.values(pcd)?.map((cd) => {
-    //   return {
-    //     _id: cd[0]._id,
-    //     date: cd[0]?.date,
-    //     customer: cd[0]?.pc,
-    //     outstanding: cd[0].outstanding,
-    //   };
-    // });
-
-    // const sumOfPCOutstanding = _.sumBy(p, 'outstanding');
-
-    // const sumOfDispatcherOutstanding =
-    //   _.sumBy(dispatcher, 'closingStock') - _.sumBy(dispatcher, 'quantity');
-
-    // res.status(200).json({
-    //   pc: sumOfPCOutstanding,
-    //   company: sumOfCompanyOutstanding,
-    //   dispatcher: sumOfDispatcherOutstanding,
-    //   total: Number(
-    //     sumOfCompanyOutstanding +
-    //       sumOfPCOutstanding +
-    //       sumOfDispatcherOutstanding
-    //   ),
-    // });
   })
 );
 
@@ -293,73 +226,42 @@ router.get(
   '/:id/sales',
   asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { year } = req.query;
+    const { year, session } = req.query;
 
     const company = await CompanyTransaction.find({
-      user:new ObjectId(id),
-    })
-      .select('company  date month year advanceCummulative outstanding')
-      .sort({ createdAt: 'desc' });
+      user: new ObjectId(id),
+    }).select('company date month year advance grns session');
 
     const pc = await PCTransaction.find({
-      user:new ObjectId(id),
-    })
-      .select('pc date month year advanceCummulative outstanding')
-      .sort({ createdAt: 'desc' });
+      user: new ObjectId(id),
+    }).select('pc date month year advance delivered session');
 
-    const dispatcher = await DispatcherTransaction.find({
-      user:new ObjectId(id),
-    })
-      .select('date month year closingStock quantity dispatcher')
-      .sort({ createdAt: 'desc' });
+    const com = _.filter(company, (item) => item?.session=== parseInt(session));
+    const pcd = _.filter(pc, (item) => item?.session === parseInt(session));
 
-    const com = _.groupBy(
-      _.filter(company, (item) => item?.year === parseInt(year)),
-      'company'
-    );
-    const pcd = _.groupBy(
-      _.filter(pc, (item) => item?.year === parseInt(year)),
-      'pc'
-    );
-    const dis = _.groupBy(
-      _.filter(dispatcher, (item) => item?.year === parseInt(year)),
-      'dispatcher'
-    );
-
-    const c = Object?.values(com)?.map((cd) => {
+    const c = com.map((cd) => {
       return {
-        _id: cd[0]._id,
-        date: cd[0]?.date,
-        month: cd[0]?.month,
-        customer: cd[0]?.company,
-        advance: cd[0].advanceCummulative,
-        outstanding: cd[0].outstanding,
+        _id: cd._id,
+        date: cd.date,
+        month: cd.month,
+        advance: cd.advance,
+        delivered: cd.grns,
+        outstanding: +cd.advance - +cd.grns,
       };
     });
 
-    const p = Object?.values(pcd)?.map((cd) => {
+    const p = pcd.map((cd) => {
       return {
-        _id: cd[0]._id,
-        date: cd[0]?.date,
-        month: cd[0]?.month,
-        customer: cd[0]?.pc,
-        advance: cd[0].advanceCummulative,
-        outstanding: cd[0].outstanding,
+        _id: cd._id,
+        date: cd.date,
+        month: cd.month,
+        advance: cd.advance,
+        delivered: cd.delivered,
+        outstanding: +cd.advance - +cd.delivered,
       };
     });
 
-    const d = Object?.values(dis)?.map((cd) => {
-      return {
-        _id: cd[0]._id,
-        date: cd[0]?.date,
-        month: cd[0]?.month,
-        customer: cd[0]?.dispatcher,
-        advance: _.sumBy(cd, 'closingStock'),
-        outstanding: _.sumBy(cd, 'quantity'),
-      };
-    });
-
-    const data = await Promise.all([p, c, d]);
+    const mergedTransactions = _.union(c, p);
 
     const months = [
       'January',
@@ -376,7 +278,7 @@ router.get(
       'December',
     ];
 
-    const flatData = _.flatMap(data).sort((a, b) => {
+    const flatData = mergedTransactions.sort((a, b) => {
       return months.indexOf(a.month) - months.indexOf(b.month);
     });
 
@@ -386,6 +288,7 @@ router.get(
     const values = Object?.values(groupedData)?.map((cd) => {
       return {
         advance: _.sumBy(cd, 'advance'),
+        delivered: _.sumBy(cd, 'delivered'),
         outstanding: _.sumBy(cd, 'outstanding'),
       };
     });
@@ -407,8 +310,8 @@ router.post(
     if (_.isEmpty(user[0])) {
       return res.status(404).json(' Username or Password is incorrect !');
     }
-    // const isTrue = bcrypt.compareSync(req.body.password, user[0].password);
-    const isTrue = req.body.password === user[0].password;
+    const isTrue = bcrypt.compareSync(req.body.password, user[0].password);
+    // const isTrue = req.body.password === user[0].password;
     if (!isTrue) {
       return res.status(404).json(' Username or Password is incorrect !');
     }
@@ -452,9 +355,9 @@ router.post(
         .json('An account with this Username already exits!');
     }
 
-    // const hashedPassword = await bcrypt.hash(newUser.password, 10);
-    // newUser.password = hashedPassword;
-    // newUser.profile = req.file?.filename;
+    const hashedPassword = await bcrypt.hash(newUser.password, 10);
+    newUser.password = hashedPassword;
+    //  newUser.profile = req.file?.filename;
 
     const user = await User.create(newUser);
 
@@ -556,7 +459,7 @@ router.get(
       username: 'admin',
       gender: 'male',
       email: 'nicktest701@gmail.com',
-      password: 'Akwasi21guy',
+      password: 'Akwasi21@guy',
       role: 'administrator',
       phonenumber: '0543772591',
     };
@@ -582,13 +485,15 @@ router.put(
     if (_.isEmpty(user)) {
       return res.status(404).json('User does not exist');
     }
-    const isTrue = oldPassword === user.password;
+    // const isTrue = oldPassword === user.password;
+    const isTrue = bcrypt.compareSync(oldPassword, user.password);
     if (!isTrue) {
-      return res.status(404).json('Password is incorrect!!!');
+      return res.status(404).json('Password is incorrect! Match not found');
     }
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     const updatedUser = await User.findByIdAndUpdate(id, {
-      password: newPassword,
+      password: hashedPassword,
     });
 
     if (_.isEmpty(updatedUser)) {

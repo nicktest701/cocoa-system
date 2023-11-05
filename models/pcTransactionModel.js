@@ -4,6 +4,7 @@ const PCTransactionSchema = new mongoose.Schema(
   {
     transactionId: String,
     date: Date,
+    advanceDate: Date,
     advance: Number,
     advanceCummulative: Number,
     delivered: Number,
@@ -17,6 +18,7 @@ const PCTransactionSchema = new mongoose.Schema(
       type: mongoose.SchemaTypes.ObjectId,
       ref: 'PC',
     },
+    session: Number,
   },
   {
     timestamps: true,

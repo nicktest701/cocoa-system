@@ -20,7 +20,8 @@ const DispatcherSchema = new mongoose.Schema(
     user:{
       type:mongoose.SchemaTypes.ObjectId,
       ref:'User'
-    }
+    },
+    
   },
   {
     timestamps: true,

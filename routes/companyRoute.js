@@ -6,37 +6,28 @@ const {
 } = require('mongoose');
 const asyncHandler = require('express-async-handler');
 const Company = require('../models/companyModel');
+const CompanyTransaction = require('../models/companyTransactionModel');
 
 //@GET Get all companies
 router.get(
   '/',
   asyncHandler(async (req, res) => {
-    const companies = await Company.find({});
+    const { user } = req.query;
+    const companies = await Company.find({
+      user: new ObjectId(user),
+    });
     res.json(companies);
   })
 );
 
-//@GET Get all  company by transactionId
+//@GET Get company by id
 router.get(
-  '/all',
+  '/:id',
   asyncHandler(async (req, res) => {
-    const transactionId = req.query.transactionId;
-    const company = await Company.findOne({
-      transactionId,
-    });
+    const id = req.query.id;
+    const company = await Company.findById(id);
 
     res.json(company);
-  })
-);
-//@GET Get  company by transactionId
-router.get(
-  '/:user',
-  asyncHandler(async (req, res) => {
-    const id = req.params.user;
-    const company = await Company.find({
-      user: ObjectId(id),
-    });
-    res.status(200).json(company);
   })
 );
 
@@ -105,6 +96,12 @@ router.put(
         .json('Error removing Company Info.Try again later!!!');
     }
 
+    await CompanyTransaction.remove({
+      company: {
+        $in: ids,
+      },
+    });
+
     return res.sendStatus(200);
   })
 );
@@ -116,18 +113,19 @@ router.delete(
   asyncHandler(async (req, res) => {
     const id = req.query.id;
 
-    if (typeof id === 'string') {
-      const removedCompany = await Company.findByIdAndDelete(id);
-      return res.sendStatus(200);
+    const removedCompany = await Company.findByIdAndDelete(id);
+
+    if (_.isEmpty(removedCompany)) {
+      return res
+        .status(404)
+        .json('Error removing Company Info.Try again later!!!');
     }
 
-    if (typeof id === 'object') {
-      id.map(async ({ _id }) => {
-        await Company.findByIdAndDelete(_id);
-      });
+    await CompanyTransaction.findOneAndDelete({
+      company: new ObjectId(id),
+    });
 
-      return res.sendStatus(200);
-    }
+    return res.sendStatus(200);
   })
 );
 

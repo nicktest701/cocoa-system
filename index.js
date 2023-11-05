@@ -20,7 +20,7 @@ const dispatcherTransactionRoute = require('./routes/dispatcherTransactionRoute'
 const app = express();
 
 //default port
-const port = process.env.PORT || 8005;
+const port = process.env.PORT || 4002;
 
 //middlewares
 app.use(cors());

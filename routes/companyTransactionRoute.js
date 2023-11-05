@@ -11,17 +11,12 @@ const CompanyTransaction = require('../models/companyTransactionModel');
 router.get(
   '/',
   asyncHandler(async (req, res) => {
-    const transactionId = req.query.transactionId;
+    const { company, session } = req.query;
 
     const companyTransaction = await CompanyTransaction.find({
-      transactionId,
+      company: ObjectId(company),
+      session,
     }).sort({ date: 1 });
-    if (_.isEmpty(companyTransaction)) {
-      return res
-        .status(404)
-        .json('Error fetching company Transactions.Try again later');
-    }
-    console.log(companyTransaction);
 
     res.json(companyTransaction);
   })
@@ -31,21 +26,15 @@ router.get(
 router.get(
   '/:id',
   asyncHandler(async (req, res) => {
-    const id = req.params.id;
-    const companyTransaction = await CompanyTransaction.find({
-      company: ObjectId(id),
-    }).sort({ date: 1 });
+    const { id } = req.params;
 
-    res.json(companyTransaction);
-  })
-);
-
-//@GET Get all  companyTransaction by transactionId
-router.get(
-  '/transaction/:id',
-  asyncHandler(async (req, res) => {
-    const id = req.params.id;
     const companyTransaction = await CompanyTransaction.findById(id);
+
+    if (_.isEmpty(companyTransaction)) {
+      return res
+        .status(404)
+        .json('Error fetching company Transaction.Try again later');
+    }
 
     res.json(companyTransaction);
   })
@@ -74,7 +63,7 @@ router.post(
 router.put(
   '/',
   asyncHandler(async (req, res) => {
-    const id = req.body.id;
+    const id = req.body._id;
     const modifiedCompanyTransaction = req.body;
 
     if (!isValidObjectId(id)) {
@@ -129,19 +118,11 @@ router.delete(
   '/:id',
   asyncHandler(async (req, res) => {
     const id = req.params.id;
-    if (typeof id === 'string') {
-      const removedCompanyTransaction =
-        await CompanyTransaction.findByIdAndDelete(id);
-      return res.sendStatus(200);
-    }
 
-    if (typeof id === 'object') {
-      id.map(async ({ _id }) => {
-        await CompanyTransaction.findByIdAndDelete(_id);
-      });
+    const removedCompanyTransaction =
+      await CompanyTransaction.findByIdAndDelete(id);
 
-      return res.sendStatus(200);
-    }
+    res.sendStatus(200);
   })
 );
 
